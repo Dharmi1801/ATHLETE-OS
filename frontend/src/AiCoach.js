@@ -1,9 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import './AiCoach.css';
-import { FiHome, FiCpu, FiCoffee, FiUser, FiSearch, FiBell, FiSettings, FiUpload, FiPlay, FiCheckCircle, FiAlertTriangle, FiInfo, FiActivity, FiCamera, FiX } from 'react-icons/fi';
-
+import { 
+  FiHome, FiCpu, FiCoffee, FiUser, FiSearch, FiBell, FiSettings, 
+  FiActivity, FiAward, FiTarget, FiLogOut, FiTrendingUp, FiChevronDown,
+  FiX, FiCamera, FiUpload, FiPlay, FiCheckCircle, FiAlertTriangle, FiInfo 
+} from 'react-icons/fi';
 export default function AiCoach() {
+  const [active, setActive] = useState("aicoach");
   const [videoSrc, setVideoSrc] = useState(null); // Uploaded video ke liye
   const [isCameraActive, setIsCameraActive] = useState(false); // Camera chal raha hai ya nahi
   const [stream, setStream] = useState(null); // Camera ka live data
@@ -91,14 +95,15 @@ const handleLogout = () => {
           <span>ELITE PERFORMANCE</span>
         </div>
         <nav className="side-nav">
-          <a href="/dashboard" className="nav-item"><FiHome /> Dashboard</a>
-          <a href="/aicoach" className="nav-item active"><FiCpu /> AI Coach</a>
-          <a href="nutrition" className="nav-item"><FiCoffee /> Nutrition</a>
-          <a href="/profile" className="nav-item"><FiUser /> Profile</a>
-           <div className="nav-item logout" onClick={handleLogout}>
-    Logout
-  </div>
-        </nav>
+                  <div className={`nav-item ${active === "dash" ? "active" : ""}`} onClick={() => { setActive("dash"); navigate("/dashboard"); }}><FiHome /> Dashboard</div>
+                  <div className={`nav-item ${active === "aicoach" ? "active" : ""}`} onClick={() => { setActive("aicoach"); navigate("/aicoach"); }}><FiCpu /> AI Coach</div>
+                  <div className={`nav-item ${active === "nutrition" ? "active" : ""}`} onClick={() => { setActive("nutrition"); navigate("/nutrition"); }}><FiCoffee /> Nutrition</div>
+                  <div className={`nav-item ${active === "injury" ? "active" : ""}`} onClick={() => { setActive("injury"); navigate("/injury"); }}><FiActivity /> Injury</div>
+                  <div className={`nav-item ${active === "ranking" ? "active" : ""}`} onClick={() => { setActive("ranking"); navigate("/ranking"); }}><FiAward /> Ranking</div>
+                  <div className={`nav-item ${active === "opportunities" ? "active" : ""}`} onClick={() => { setActive("opportunities"); navigate("/opportunities"); }}><FiTarget /> Opportunities</div>
+                  <div className={`nav-item ${active === "profile" ? "active" : ""}`} onClick={() => { setActive("profile"); navigate("/profile"); }}><FiUser /> Profile</div>
+                  <div className="nav-item logout" onClick={handleLogout} style={{ marginTop: 'auto', color: '#ff5252', cursor: 'pointer' }}><FiLogOut /> Logout</div>
+                </nav>
         <div className="user-profile-mini">
           <div className="avatar"></div>
           <div className="user-info">

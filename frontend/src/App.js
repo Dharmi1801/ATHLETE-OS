@@ -4,6 +4,10 @@ import Dashboard from './Dashboard';
 import AiCoach from './AiCoach';
 import Profile from './Profile';
 import Nutrition from './Nutrition';
+import Ranking from './Ranking';
+import Injury from './Injury';
+import Opportunities from './Opportunities';
+
 
 function App() {
   return (
@@ -14,7 +18,9 @@ function App() {
         <Route path="/aicoach" element={<AiCoach />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/nutrition" element={<Nutrition/>} />
-        
+        <Route path="/ranking" element={<Ranking />} />
+        <Route path="/injury" element={<Injury />} />
+        <Route path="/opportunities" element={<Opportunities />} />
       </Routes>
     </Router>
   );

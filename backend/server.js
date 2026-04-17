@@ -88,6 +88,81 @@ app.put('/api/profile/:userId', async (req, res) => {
   }
 });
 
+// 1. Leaderboard Data Fetch Karne Ki API
+app.get('/api/leaderboard', async (req, res) => {
+    try {
+        // Top se lekar bottom tak rank wise data bhejega
+        const result = await pool.query('SELECT * FROM leaderboard ORDER BY rank_position ASC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Event Register Karne Ki API
+app.post('/api/register-event', async (req, res) => {
+    const { userId, eventName } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO event_registrations (user_id, event_name) VALUES ($1, $2)', 
+            [userId, eventName]
+        );
+        res.json({ success: true, message: "Successfully registered for the event!" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Daily Fitness Log Save Karne Ki API
+app.post('/api/fitness-log', async (req, res) => {
+    const { userId, trainingDuration, sleepHours, painLevel, energyLevel } = req.body;
+    
+    try {
+        await pool.query(
+            `INSERT INTO daily_fitness_logs (user_id, training_duration, sleep_hours, pain_level, energy_level) 
+             VALUES ($1, $2, $3, $4, $5)`,
+            [userId, trainingDuration, sleepHours, painLevel, energyLevel]
+        );
+        res.json({ success: true, message: "Today's data updated successfully!" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 1. Fetch Events (Filter ke sath)
+app.get('/api/opportunities', async (req, res) => {
+    const { category } = req.query;
+    try {
+        let query = 'SELECT * FROM opportunities_events';
+        let params = [];
+        
+        // Agar user ne 'All Events' ke alawa kuch select kiya hai
+        if (category && category !== 'All Events') {
+            query += ' WHERE category = $1';
+            params.push(category);
+        }
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Register for an Event
+app.post('/api/opportunities/register', async (req, res) => {
+    const { userId, eventId } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO opportunity_registrations (user_id, event_id) VALUES ($1, $2)',
+            [userId, eventId]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // 🔥 SERVER START
 const PORT = process.env.PORT || 5000;
 
