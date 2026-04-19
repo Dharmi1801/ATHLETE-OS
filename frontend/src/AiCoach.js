@@ -1,278 +1,473 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import './AiCoach.css';
-import { 
-  FiHome, FiCpu, FiCoffee, FiUser, FiSearch, FiBell, FiSettings, 
-  FiActivity, FiAward, FiTarget, FiLogOut, FiTrendingUp, FiChevronDown,
-  FiX, FiCamera, FiUpload, FiPlay, FiCheckCircle, FiAlertTriangle, FiInfo 
-} from 'react-icons/fi';
+import "./AiCoach.css";
+
+import { Pose } from "@mediapipe/pose";
+import { Camera } from "@mediapipe/camera_utils";
+import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+
+import {
+  FiHome,
+  FiCpu,
+  FiCoffee,
+  FiUser,
+  FiSearch,
+  FiBell,
+  FiSettings,
+  FiActivity,
+  FiAward,
+  FiTarget,
+  FiLogOut,
+  FiX,
+  FiCamera,
+  FiUpload
+} from "react-icons/fi";
+
 export default function AiCoach() {
-  const [active, setActive] = useState("aicoach");
-  const [videoSrc, setVideoSrc] = useState(null); // Uploaded video ke liye
-  const [isCameraActive, setIsCameraActive] = useState(false); // Camera chal raha hai ya nahi
-  const [stream, setStream] = useState(null); // Camera ka live data
+  const navigate = useNavigate();
 
-const navigate = useNavigate();
+  // ---------------- STATE ----------------
+  const [active] = useState("aicoach");
 
+  const [videoSrc, setVideoSrc] = useState(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
 
-const handleLogout = () => {
-  // 🔥 localStorage clear
-  localStorage.removeItem("userId");
+  const [message, setMessage] = useState("");
+  const [aiReply, setAiReply] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // (optional) sab clear karna ho to:
-  // localStorage.clear();
+  const [depth, setDepth] = useState(0);
+  const [kneeAngle, setKneeAngle] = useState(0);
+  const [posture, setPosture] = useState("Waiting...");
+  const [reps, setReps] = useState(0);
+  const [downPosition, setDownPosition] = useState(false);
 
-  // 🔥 redirect to login page
-  navigate("/");
-};
+  // ---------------- REFS ----------------
   const fileInputRef = useRef(null);
-  const liveVideoRef = useRef(null); // Live camera ko screen par dikhane ke liye ref
+  const liveVideoRef = useRef(null);
+  const uploadVideoRef = useRef(null);
+  const canvasRef = useRef(null);
 
-  // 1. Upload Video ka logic
+  const poseRef = useRef(null);
+  const cameraRef = useRef(null);
+
+  // ---------------- LOGOUT ----------------
+  const handleLogout = () => {
+    localStorage.removeItem("userId");
+    navigate("/");
+  };
+
+  // ---------------- AI CHAT ----------------
+  const askCoach = async () => {
+    if (!message.trim()) return;
+
+    try {
+      setLoading(true);
+
+      const res = await fetch("http://localhost:5000/api/coach/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message,
+          metrics: {
+            depth,
+            kneeAngle,
+            posture,
+            reps
+          }
+        })
+      });
+
+      const data = await res.json();
+      setAiReply(data.reply || "No response");
+    } catch (error) {
+      setAiReply("Backend error");
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------------- ANGLE ----------------
+  const calculateAngle = (a, b, c) => {
+    const ab = { x: a.x - b.x, y: a.y - b.y };
+    const cb = { x: c.x - b.x, y: c.y - b.y };
+
+    const dot = ab.x * cb.x + ab.y * cb.y;
+    const magAB = Math.sqrt(ab.x * ab.x + ab.y * ab.y);
+    const magCB = Math.sqrt(cb.x * cb.x + cb.y * cb.y);
+
+    const angle = Math.acos(dot / (magAB * magCB));
+    return (angle * 180) / Math.PI;
+  };
+
+  // ---------------- MEDIAPIPE RESULTS ----------------
+  const onResults = (results) => {
+    if (!canvasRef.current) return;
+    if (!results.poseLandmarks) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    const source =
+      liveVideoRef.current && liveVideoRef.current.videoWidth > 0
+        ? liveVideoRef.current
+        : uploadVideoRef.current;
+
+    if (!source || !source.videoWidth) return;
+
+    canvas.width = source.videoWidth;
+    canvas.height = source.videoHeight;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawConnectors(ctx, results.poseLandmarks, Pose.POSE_CONNECTIONS, {
+      color: "#00e5ff",
+      lineWidth: 3
+    });
+
+    drawLandmarks(ctx, results.poseLandmarks, {
+      color: "#00ff99",
+      lineWidth: 2
+    });
+
+    const lm = results.poseLandmarks;
+
+    const hip = lm[24];
+    const knee = lm[26];
+    const ankle = lm[28];
+    const shoulder = lm[12];
+
+    const angle = calculateAngle(hip, knee, ankle);
+
+    setKneeAngle(Math.round(angle));
+    setDepth(Math.round(Math.max(0, 180 - angle)));
+
+    if (shoulder.x > hip.x + 0.08) {
+      setPosture("Lean Forward");
+    } else {
+      setPosture("Good");
+    }
+
+    if (angle < 95 && !downPosition) {
+      setDownPosition(true);
+    }
+
+    if (angle > 155 && downPosition) {
+      setReps((prev) => prev + 1);
+      setDownPosition(false);
+    }
+  };
+
+  // ---------------- INIT MEDIAPIPE ----------------
+  useEffect(() => {
+    const pose = new Pose({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+    });
+
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    pose.onResults(onResults);
+    poseRef.current = pose;
+
+    return () => {
+      stopCamera();
+    };
+  }, [downPosition]);
+
+  // ---------------- START CAMERA ----------------
+  const startCamera = async () => {
+    try {
+      stopCamera();
+      setVideoSrc(null);
+
+      setIsCameraActive(true);
+
+      setTimeout(async () => {
+        if (!liveVideoRef.current) return;
+
+        const camera = new Camera(liveVideoRef.current, {
+          onFrame: async () => {
+            if (poseRef.current && liveVideoRef.current) {
+              await poseRef.current.send({
+                image: liveVideoRef.current
+              });
+            }
+          },
+          width: 640,
+          height: 480
+        });
+
+        cameraRef.current = camera;
+        await camera.start();
+      }, 300);
+    } catch (error) {
+      console.log(error);
+      alert("Camera permission denied");
+    }
+  };
+
+  // ---------------- STOP CAMERA ----------------
+  const stopCamera = () => {
+    setIsCameraActive(false);
+
+    if (cameraRef.current) {
+      cameraRef.current.stop();
+      cameraRef.current = null;
+    }
+  };
+
+  // ---------------- UPLOAD VIDEO ----------------
   const handleUploadClick = () => {
-    stopCamera(); // Agar camera chal raha hai toh band kar do
+    stopCamera();
     fileInputRef.current.click();
   };
 
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const videoUrl = URL.createObjectURL(file);
-      setVideoSrc(videoUrl);
-      setIsCameraActive(false);
-    }
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    stopCamera();
+
+    const url = URL.createObjectURL(file);
+    setVideoSrc(url);
   };
 
-  // 2. Live Camera shuru karne ka logic
-  const startCamera = async () => {
-    try {
-      // Pehle uploaded video hata do
-      setVideoSrc(null); 
-      
-      // Browser se camera ki permission maango
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      setStream(mediaStream);
-      setIsCameraActive(true);
-      
-    } catch (err) {
-      alert("Camera permission denied! Please allow camera access in your browser settings.");
-      console.error("Camera Error:", err);
-    }
-  };
+  // ---------------- VIDEO ANALYSIS ----------------
+  const handleUploadedPlay = () => {
+    const detect = async () => {
+      if (
+        uploadVideoRef.current &&
+        !uploadVideoRef.current.paused &&
+        !uploadVideoRef.current.ended
+      ) {
+        await poseRef.current.send({
+          image: uploadVideoRef.current
+        });
 
-  // 3. Camera band karne ka logic
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop()); // Camera ki light band kar dega
-      setStream(null);
-    }
-    setIsCameraActive(false);
-  };
-
-  // Jab isCameraActive true ho, toh video tag me stream daal do
-  useEffect(() => {
-    if (isCameraActive && liveVideoRef.current && stream) {
-      liveVideoRef.current.srcObject = stream;
-    }
-  }, [isCameraActive, stream]);
-
-  // Jab user page chhod kar jaye, toh automatically camera band ho jaye
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        requestAnimationFrame(detect);
       }
     };
-  }, [stream]);
 
+    detect();
+  };
+
+  // ---------------- UI ----------------
   return (
     <div className="dashboard-container">
-      
       {/* SIDEBAR */}
       <aside className="sidebar">
         <div className="logo-section">
           <h2>ATHLETE OS</h2>
           <span>ELITE PERFORMANCE</span>
         </div>
+
         <nav className="side-nav">
-                  <div className={`nav-item ${active === "dash" ? "active" : ""}`} onClick={() => { setActive("dash"); navigate("/dashboard"); }}><FiHome /> Dashboard</div>
-                  <div className={`nav-item ${active === "aicoach" ? "active" : ""}`} onClick={() => { setActive("aicoach"); navigate("/aicoach"); }}><FiCpu /> AI Coach</div>
-                  <div className={`nav-item ${active === "nutrition" ? "active" : ""}`} onClick={() => { setActive("nutrition"); navigate("/nutrition"); }}><FiCoffee /> Nutrition</div>
-                  <div className={`nav-item ${active === "injury" ? "active" : ""}`} onClick={() => { setActive("injury"); navigate("/injury"); }}><FiActivity /> Injury</div>
-                  <div className={`nav-item ${active === "ranking" ? "active" : ""}`} onClick={() => { setActive("ranking"); navigate("/ranking"); }}><FiAward /> Ranking</div>
-                  <div className={`nav-item ${active === "opportunities" ? "active" : ""}`} onClick={() => { setActive("opportunities"); navigate("/opportunities"); }}><FiTarget /> Opportunities</div>
-                  <div className={`nav-item ${active === "profile" ? "active" : ""}`} onClick={() => { setActive("profile"); navigate("/profile"); }}><FiUser /> Profile</div>
-                  <div className="nav-item logout" onClick={handleLogout} style={{ marginTop: 'auto', color: '#ff5252', cursor: 'pointer' }}><FiLogOut /> Logout</div>
-                </nav>
-        <div className="user-profile-mini">
-          <div className="avatar"></div>
-          <div className="user-info">
-            <h4>Arjun V.</h4>
-            <p>Pro Sprinter</p>
+          <div className="nav-item" onClick={() => navigate("/dashboard")}>
+            <FiHome /> Dashboard
           </div>
-        </div>
+
+          <div className="nav-item active">
+            <FiCpu /> AI Coach
+          </div>
+
+          <div className="nav-item" onClick={() => navigate("/nutrition")}>
+            <FiCoffee /> Nutrition
+          </div>
+
+          <div className="nav-item" onClick={() => navigate("/injury")}>
+            <FiActivity /> Injury
+          </div>
+
+          <div className="nav-item" onClick={() => navigate("/ranking")}>
+            <FiAward /> Ranking
+          </div>
+
+          <div className="nav-item" onClick={() => navigate("/opportunities")}>
+            <FiTarget /> Opportunities
+          </div>
+
+          <div className="nav-item" onClick={() => navigate("/profile")}>
+            <FiUser /> Profile
+          </div>
+
+          <div
+            className="nav-item logout"
+            style={{ color: "red", marginTop: "auto" }}
+            onClick={handleLogout}
+          >
+            <FiLogOut /> Logout
+          </div>
+        </nav>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN */}
       <main className="main-content">
-        
         <header className="top-bar">
           <div className="search-bar">
-            <FiSearch className="search-icon" />
-            <input type="text" placeholder="Search biomechanics sessions..." />
+            <FiSearch />
+            <input placeholder="Search..." />
           </div>
+
           <div className="top-actions">
             <FiBell className="icon" />
             <FiSettings className="icon" />
           </div>
         </header>
 
-        {/* PAGE HEADER */}
+        {/* HEADER */}
         <div className="header-section ai-header">
-          <div>
-            <h1>AI Biomechanics <span className="text-cyan">Coach</span></h1>
-            <p className="subtitle" style={{textTransform: 'none', fontSize: '13px', marginTop: '5px'}}>
-              Session: Dynamic Squat Depth Analysis • Oct 24, 2023
-            </p>
-          </div>
-          
-          <input 
-            type="file" 
-            accept="video/mp4,video/x-m4v,video/*" 
-            style={{ display: 'none' }} 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
+          <h1>
+            AI Biomechanics <span className="text-cyan">Coach</span>
+          </h1>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            hidden
+            accept="video/*"
+            onChange={handleFileChange}
           />
-          
-          {/* ACTION BUTTONS (Camera & Upload) */}
+
           <div className="header-action-buttons">
             {isCameraActive ? (
-              <button className="btn-outline-red flex-btn" onClick={stopCamera}>
+              <button className="btn-outline-red" onClick={stopCamera}>
                 <FiX /> Stop Camera
               </button>
             ) : (
-              <button className="btn-outline-cyan flex-btn" onClick={startCamera}>
+              <button className="btn-outline-cyan" onClick={startCamera}>
                 <FiCamera /> Use Camera
               </button>
             )}
-            
-            <button className="btn-primary flex-btn" onClick={handleUploadClick}>
+
+            <button className="btn-primary" onClick={handleUploadClick}>
               <FiUpload /> Upload Video
             </button>
           </div>
         </div>
 
-        {/* MAIN LAYOUT GRID */}
+        {/* CONTENT */}
         <div className="ai-content-grid">
-          
-          {/* LEFT COLUMN - VIDEO & METRICS */}
+          {/* LEFT */}
           <div className="left-column">
-            
             <div className="video-player-card">
-              <div className="video-placeholder">
-                
-                {/* CONDITIONAL RENDERING: Live Camera OR Uploaded Video OR Placeholder */}
+              <div
+                className="video-placeholder"
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: "500px",
+                  background: "#000",
+                  borderRadius: "12px",
+                  overflow: "hidden"
+                }}
+              >
                 {isCameraActive ? (
-                  <video 
-                    ref={liveVideoRef} 
-                    autoPlay 
-                    playsInline 
-                    muted 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', transform: 'scaleX(-1)' }} 
-                    /* transform: scaleX(-1) mirror effect deta hai taaki camera natural lage */
+                  <video
+                    ref={liveVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover"
+                    }}
                   />
                 ) : videoSrc ? (
-                  <video 
-                    src={videoSrc} 
-                    controls 
-                    autoPlay 
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px', backgroundColor: '#000' }}
+                  <video
+                    ref={uploadVideoRef}
+                    src={videoSrc}
+                    controls
+                    autoPlay
+                    onPlay={handleUploadedPlay}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain"
+                    }}
                   />
-                ) : (
-                  <>
-                    <div className="play-button-large"><FiPlay /></div>
-                    <div className="skeleton-line"><span className="angle-text text-cyan">84.2°</span></div>
-                  </>
-                )}
-                
-              </div>
-              
-              <div className="video-controls">
-                <button className="play-btn-small"><FiPlay /></button>
-                <div className="progress-bar-container">
-                  <div className="progress-bar-fill"></div>
-                  <div className="progress-dot"></div>
-                </div>
-                <span className="time-text">00:42 / 01:15</span>
+                ) : null}
+
+                <canvas
+                  ref={canvasRef}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none"
+                  }}
+                />
               </div>
             </div>
 
+            {/* METRICS */}
             <div className="video-metrics-row">
               <div className="metric-box border-green">
-                <p>DEPTH QUALITY</p>
-                <h3>94% <FiCheckCircle className="text-green icon-right" /></h3>
+                <p>DEPTH</p>
+                <h3>{depth}%</h3>
               </div>
+
               <div className="metric-box border-red">
-                <p>KNEE DRIFT</p>
-                <h3>Moderate <FiAlertTriangle className="text-red icon-right" /></h3>
+                <p>KNEE ANGLE</p>
+                <h3>{kneeAngle}°</h3>
               </div>
-              <div className="metric-box border-green">
-                <p>SPINE ANGLE</p>
-                <h3>Optimal <FiActivity className="text-green icon-right" /></h3>
-              </div>
+
               <div className="metric-box border-cyan">
-                <p>PEAK FORCE</p>
-                <h3>2.4 kN <span className="text-cyan icon-right">⚡</span></h3>
+                <p>POSTURE</p>
+                <h3>{posture}</h3>
+              </div>
+
+              <div className="metric-box border-green">
+                <p>REPS</p>
+                <h3>{reps}</h3>
               </div>
             </div>
           </div>
 
-          {/* RIGHT COLUMN - FEEDBACK & SUGGESTIONS */}
+          {/* RIGHT */}
           <div className="right-column">
             <div className="card feedback-card">
-              <h3>📊 Live Analysis Feedback</h3>
+              <h3>📊 Live Analysis</h3>
+
               <div className="feedback-pills">
-                <div className="pill pill-green"><span className="dot-green"></span> Back alignment perfect</div>
-                <div className="pill pill-red"><span className="dot-red"></span> Knee angle incorrect</div>
-                <div className="pill pill-green"><span className="dot-green"></span> Foot pressure centered</div>
-                <div className="pill pill-grey"><span className="dot-cyan"></span> Hip hinge detected</div>
+                <div className="pill pill-green">Depth: {depth}%</div>
+                <div className="pill pill-red">Knee: {kneeAngle}°</div>
+                <div className="pill pill-grey">Posture: {posture}</div>
+                <div className="pill pill-green">Reps: {reps}</div>
               </div>
             </div>
 
             <div className="card suggestions-card">
               <h3>AI Coach Suggestions</h3>
-              <p className="subtitle-text">Actionable improvements for your next set</p>
-              <div className="suggestion-list">
-                <div className="suggestion-item">
-                  <div className="icon-circle icon-cyan"><FiInfo /></div>
-                  <div>
-                    <h4>Adjust Stance Width</h4>
-                    <p>Widening your stance by 2-3 inches will reduce the shear force on your patellar tendon during descent.</p>
-                  </div>
-                </div>
-                <div className="suggestion-item">
-                  <div className="icon-circle icon-cyan"><FiCheckCircle /></div>
-                  <div>
-                    <h4>Core Bracing Priority</h4>
-                    <p>Detected slight lumbar rounding at the bottom of the rep. Focus on 360-degree intra-abdominal pressure.</p>
-                  </div>
-                </div>
-              </div>
-              <button className="btn-outline-cyan">Generate Detailed PDF Report</button>
-            </div>
 
-            <div className="card hr-card">
-              <div className="hr-header">
-                <p>HEART RATE SYNC</p>
-                <span className="live-status"><span className="dot"></span> LIVE</span>
-              </div>
-              <h2>142 <span>BPM</span></h2>
-              <div className="hr-bars">
-                <div className="bar"></div>
-                <div className="bar"></div>
-                <div className="bar"></div>
-                <div className="bar"></div>
-                <div className="bar active-bar"></div>
+              <div className="ai-chat-box">
+                <input
+                  type="text"
+                  placeholder="Ask your AI Coach..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                />
+
+                <button className="btn-outline-cyan" onClick={askCoach}>
+                  {loading ? "Thinking..." : "Ask AI Coach"}
+                </button>
+
+                {aiReply && (
+                  <div className="ai-response">
+                    🤖 {aiReply}
+                  </div>
+                )}
               </div>
             </div>
           </div>

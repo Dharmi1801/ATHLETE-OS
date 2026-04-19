@@ -163,6 +163,13 @@ app.post('/api/opportunities/register', async (req, res) => {
     }
 });
 
+// for coach ai
+app.use("/api/coach", require("./routes/coachRoutes"));
+
+app.get("/", (req, res) => {
+  res.send("Coach AI Backend Running");
+});
+
 // 🔥 SERVER START
 const PORT = process.env.PORT || 5000;
 
