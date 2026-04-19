@@ -152,3 +152,52 @@
   box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4); transition: transform 0.2s;
 }
 .fab-button:hover { transform: scale(1.05); }
+
+/* =========================================
+   AI Loading States & Spinner
+========================================= */
+.ai-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+}
+
+.ai-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* AI-generated meal image placeholder */
+.meal-img-ai {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  min-width: 80px;
+  height: 80px;
+}
+
+/* Micronutrient bar colors */
+.bg-cyan-bar { background: var(--cyan) !important; }
+.bg-muted-bar { background: var(--text-muted) !important; }
+
+/* Disabled button state */
+.inter-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-outline-cyan:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

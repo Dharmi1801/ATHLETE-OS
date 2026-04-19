@@ -1,71 +1,133 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import './Nutrition.css';
 import { useNavigate } from "react-router-dom";
 import { FiHome, FiCpu, FiCoffee, FiUser, FiSearch, FiBell, FiSettings, FiCheckCircle, FiAlertCircle, FiZap, FiPlus, FiActivity, FiAward, FiTarget, FiLogOut } from 'react-icons/fi';
 import { BiTargetLock, BiLeaf } from 'react-icons/bi';
 import { MdOutlineSetMeal } from 'react-icons/md';
 
+const GEMINI_API_KEY = 'AIzaSyAHj73-LAJX7-WezYcsD_Eb25zORM-N37M';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
 export default function Nutrition() {
   const [active, setActive] = useState("nutrition");
-
-  // 1. Interactive States
   const [goal, setGoal] = useState('Build Muscle');
   const [diet, setDiet] = useState('Veg');
   const navigate = useNavigate();
 
-const handleLogout = () => {
-  // 🔥 localStorage clear
-  localStorage.removeItem("userId");
+  const [loading, setLoading] = useState(false);
+  const [dietPlan, setDietPlan] = useState(null);
+  const [error, setError] = useState(null);
 
-  // (optional) sab clear karna ho to:
-  // localStorage.clear();
-
-  // 🔥 redirect to login page
-  navigate("/");
-};
-  // 2. Dynamic Data Logic (Goal change hone par Macros change honge)
-  const nutritionStats = {
-    'Build Muscle': { cals: '2,840', protein: '180g', carbs: '320g', fats: '65g', width: '75%' },
-    'Stamina': { cals: '3,200', protein: '140g', carbs: '450g', fats: '85g', width: '90%' },
-    'Cut Weight': { cals: '1,950', protein: '160g', carbs: '150g', fats: '55g', width: '40%' }
+  const handleLogout = () => {
+    localStorage.removeItem("userId");
+    navigate("/");
   };
 
-  // 3. Dynamic Meals Logic (Veg/Non-Veg change hone par Meals change honge)
-  const mealsData = {
-    'Veg': [
-      { time: '06:30 AM • PRE-WORKOUT', cals: 320, title: 'Chilled Sattu Power Blast', desc: "Bihar's legacy fuel. High fiber, sustained release carbs with 15g protein.", tags: ['HYDRATION+', 'ALKALINE'], color: 'cyan', bg: 'bg-sattu' },
-      { time: '01:30 PM • POST-LUNCH FUEL', cals: 640, title: 'Ragi Rotis & Sprouted Moong', desc: "Finger millet energy with protein-packed sprouts and seasonal greens.", tags: ['CALCIUM RICH', 'GLUTEN FREE'], color: 'green', bg: 'bg-ragi' },
-      { time: '05:00 PM • RECOVERY SNACK', cals: 280, title: 'Grilled Peri-Peri Paneer', desc: "150g Fresh Paneer sautéed with cold-pressed olive oil and local spices.", tags: ['CASEIN PROTEIN', 'LOW GI'], color: 'red', bg: 'bg-paneer' }
-    ],
-    'Non-Veg': [
-      { time: '06:30 AM • PRE-WORKOUT', cals: 350, title: 'Egg Whites & Oatmeal', desc: "Classic athletic breakfast. Fast-absorbing protein and complex carbs.", tags: ['HIGH PROTEIN', 'SUSTAINED ENERGY'], color: 'cyan', bg: 'bg-eggs' },
-      { time: '01:30 PM • POST-LUNCH FUEL', cals: 680, title: 'Grilled Chicken & Quinoa', desc: "Lean chicken breast with fiber-rich quinoa and steamed broccoli.", tags: ['LEAN MUSCLE', 'IRON RICH'], color: 'green', bg: 'bg-chicken' },
-      { time: '05:00 PM • RECOVERY SNACK', cals: 320, title: 'Pan-Seared Salmon', desc: "Rich in Omega-3 fatty acids for joint recovery and CNS repair.", tags: ['OMEGA-3', 'JOINT HEALTH'], color: 'red', bg: 'bg-salmon' }
-    ]
+  const fetchDietPlan = useCallback(async () => {
+
+  // Prevent spam clicking
+  const lastCall = localStorage.getItem('lastDietCall');
+  const now = Date.now();
+  if (lastCall && now - parseInt(lastCall) < 10000) {
+    setError('Please wait 10 seconds before generating again.');
+    return;
+  }
+  localStorage.setItem('lastDietCall', now.toString());
+  
+  
+    setLoading(true);
+    setError(null);
+const prompt = `Nutritionist. Diet plan for athlete. Goal: ${goal}. Diet: ${diet}.
+${diet === 'Veg' ? 'Vegetarian only.' : 'Include chicken fish eggs.'}
+
+Return ONLY this JSON no extra text:
+{"macros":{"cals":"2840","protein":"180g","carbs":"320g","fats":"65g","width":"75%"},"meals":[{"time":"06:30 AM • PRE-WORKOUT","cals":320,"title":"X","desc":"X.","tags":["A","B"],"color":"cyan","timeSlot":"pre-workout"},{"time":"09:00 AM • BREAKFAST","cals":480,"title":"X","desc":"X.","tags":["A","B"],"color":"green","timeSlot":"breakfast"},{"time":"01:30 PM • LUNCH","cals":640,"title":"X","desc":"X.","tags":["A","B"],"color":"green","timeSlot":"lunch"},{"time":"05:00 PM • SNACK","cals":280,"title":"X","desc":"X.","tags":["A","B"],"color":"red","timeSlot":"snack"},{"time":"08:30 PM • DINNER","cals":580,"title":"X","desc":"X.","tags":["A","B"],"color":"cyan","timeSlot":"dinner"}],"aiInsight":"X.","supplements":["X","X","X"],"micronutrients":[{"name":"Vitamin D3","status":"OPTIMAL","level":90},{"name":"Iron","status":"CRITICAL","level":25},{"name":"Magnesium","status":"GOOD","level":68},{"name":"Zinc","status":"LOW","level":42}]}
+
+Replace all X values with real content for ${goal} ${diet} athlete. Keep desc under 15 words. Keep title under 5 words.`;
+
+    try {
+      const response = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8000 }
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error?.message || `Gemini error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (!rawText) throw new Error('Empty response from Gemini');
+const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+let fixedJson = cleaned;
+try {
+  JSON.parse(fixedJson);
+} catch(e) {
+  const lastBrace = fixedJson.lastIndexOf('}');
+  const lastBracket = fixedJson.lastIndexOf(']');
+  if (lastBrace > lastBracket) {
+    fixedJson = fixedJson.substring(0, lastBrace + 1);
+  } else {
+    fixedJson = fixedJson.substring(0, lastBracket + 1);
+  }
+  let opens = (fixedJson.match(/{/g) || []).length;
+  let closes = (fixedJson.match(/}/g) || []).length;
+  let arrOpens = (fixedJson.match(/\[/g) || []).length;
+  let arrCloses = (fixedJson.match(/\]/g) || []).length;
+  for (let i = 0; i < arrOpens - arrCloses; i++) fixedJson += ']';
+  for (let i = 0; i < opens - closes; i++) fixedJson += '}';
+}
+
+const plan = JSON.parse(fixedJson);
+setDietPlan(plan);
+
+    } catch (err) {
+      console.error('Diet plan error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [goal, diet]);
+
+  
+
+  const microStatusColor = (status) => {
+    if (status === 'OPTIMAL') return { text: 'text-green', bar: 'bg-green' };
+    if (status === 'GOOD') return { text: 'text-cyan', bar: 'bg-cyan-bar' };
+    if (status === 'LOW') return { text: 'text-muted', bar: 'bg-muted-bar' };
+    if (status === 'CRITICAL') return { text: 'text-red', bar: 'bg-red' };
+    return { text: 'text-muted', bar: 'bg-muted-bar' };
   };
 
-  const currentStats = nutritionStats[goal];
-  const currentMeals = mealsData[diet];
+  const currentStats = dietPlan?.macros || { cals: '—', protein: '—g', carbs: '—g', fats: '—g', width: '0%' };
+  const currentMeals = dietPlan?.meals || [];
+  const aiInsight = dietPlan?.aiInsight || '';
+  const supplements = dietPlan?.supplements || [];
+  const micronutrients = dietPlan?.micronutrients || [];
 
   return (
     <div className="dashboard-container">
-      
-      {/* SIDEBAR */}
       <aside className="sidebar">
         <div className="logo-section">
           <h2>ATHLETE OS</h2>
           <span>ELITE PERFORMANCE</span>
         </div>
         <nav className="side-nav">
-                  <div className={`nav-item ${active === "dash" ? "active" : ""}`} onClick={() => { setActive("dash"); navigate("/dashboard"); }}><FiHome /> Dashboard</div>
-                  <div className={`nav-item ${active === "aicoach" ? "active" : ""}`} onClick={() => { setActive("aicoach"); navigate("/aicoach"); }}><FiCpu /> AI Coach</div>
-                  <div className={`nav-item ${active === "nutrition" ? "active" : ""}`} onClick={() => { setActive("nutrition"); navigate("/nutrition"); }}><FiCoffee /> Nutrition</div>
-                  <div className={`nav-item ${active === "injury" ? "active" : ""}`} onClick={() => { setActive("injury"); navigate("/injury"); }}><FiActivity /> Injury</div>
-                  <div className={`nav-item ${active === "ranking" ? "active" : ""}`} onClick={() => { setActive("ranking"); navigate("/ranking"); }}><FiAward /> Ranking</div>
-                  <div className={`nav-item ${active === "opportunities" ? "active" : ""}`} onClick={() => { setActive("opportunities"); navigate("/opportunities"); }}><FiTarget /> Opportunities</div>
-                  <div className={`nav-item ${active === "profile" ? "active" : ""}`} onClick={() => { setActive("profile"); navigate("/profile"); }}><FiUser /> Profile</div>
-                  <div className="nav-item logout" onClick={handleLogout} style={{ marginTop: 'auto', color: '#ff5252', cursor: 'pointer' }}><FiLogOut /> Logout</div>
-                </nav>
+          <div className={`nav-item ${active === "dash" ? "active" : ""}`} onClick={() => { setActive("dash"); navigate("/dashboard"); }}><FiHome /> Dashboard</div>
+          <div className={`nav-item ${active === "aicoach" ? "active" : ""}`} onClick={() => { setActive("aicoach"); navigate("/aicoach"); }}><FiCpu /> AI Coach</div>
+          <div className={`nav-item ${active === "nutrition" ? "active" : ""}`} onClick={() => { setActive("nutrition"); navigate("/nutrition"); }}><FiCoffee /> Nutrition</div>
+          <div className={`nav-item ${active === "injury" ? "active" : ""}`} onClick={() => { setActive("injury"); navigate("/injury"); }}><FiActivity /> Injury</div>
+          <div className={`nav-item ${active === "ranking" ? "active" : ""}`} onClick={() => { setActive("ranking"); navigate("/ranking"); }}><FiAward /> Ranking</div>
+          <div className={`nav-item ${active === "opportunities" ? "active" : ""}`} onClick={() => { setActive("opportunities"); navigate("/opportunities"); }}><FiTarget /> Opportunities</div>
+          <div className={`nav-item ${active === "profile" ? "active" : ""}`} onClick={() => { setActive("profile"); navigate("/profile"); }}><FiUser /> Profile</div>
+          <div className="nav-item logout" onClick={handleLogout} style={{ marginTop: 'auto', color: '#ff5252', cursor: 'pointer' }}><FiLogOut /> Logout</div>
+        </nav>
         <div className="user-profile-mini">
           <div className="avatar"></div>
           <div className="user-info">
@@ -75,10 +137,7 @@ const handleLogout = () => {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
       <main className="main-content">
-        
-        {/* TOP BAR */}
         <header className="top-bar">
           <div className="search-bar">
             <FiSearch className="search-icon" />
@@ -91,147 +150,202 @@ const handleLogout = () => {
           </div>
         </header>
 
-        {/* NUTRITION 3-COLUMN GRID */}
         <div className="nutrition-grid">
-          
-          {/* ================= LEFT COLUMN ================= */}
+
+          {/* LEFT COLUMN */}
           <div className="nutri-left-col">
-            
-            {/* Performance Goal */}
             <div className="card">
               <h3 className="card-title-small"><BiTargetLock className="text-cyan" size={18}/> PERFORMANCE GOAL</h3>
               <div className="interactive-btn-group">
-                <button className={`inter-btn ${goal === 'Build Muscle' ? 'active-cyan' : ''}`} onClick={() => setGoal('Build Muscle')}>
-                  Build Muscle <FiZap />
-                </button>
-                <button className={`inter-btn ${goal === 'Stamina' ? 'active-cyan' : ''}`} onClick={() => setGoal('Stamina')}>
-                  Stamina
-                </button>
-                <button className={`inter-btn ${goal === 'Cut Weight' ? 'active-cyan' : ''}`} onClick={() => setGoal('Cut Weight')}>
-                  Cut Weight
-                </button>
+                <button className={`inter-btn ${goal === 'Build Muscle' ? 'active-cyan' : ''}`} onClick={() => setGoal('Build Muscle')} disabled={loading}>Build Muscle <FiZap /></button>
+                <button className={`inter-btn ${goal === 'Stamina' ? 'active-cyan' : ''}`} onClick={() => setGoal('Stamina')} disabled={loading}>Stamina</button>
+                <button className={`inter-btn ${goal === 'Cut Weight' ? 'active-cyan' : ''}`} onClick={() => setGoal('Cut Weight')} disabled={loading}>Cut Weight</button>
               </div>
             </div>
 
-            {/* Dietary Type */}
             <div className="card">
               <h3 className="card-title-small"><BiLeaf className="text-green" size={18}/> DIETARY TYPE</h3>
               <div className="diet-toggle-box">
-                <div className={`diet-box ${diet === 'Veg' ? 'active-veg' : ''}`} onClick={() => setDiet('Veg')}>
-                  <BiLeaf size={24} />
-                  <span>VEG</span>
+                <div className={`diet-box ${diet === 'Veg' ? 'active-veg' : ''}`} onClick={() => !loading && setDiet('Veg')}>
+                  <BiLeaf size={24} /><span>VEG</span>
                 </div>
-                <div className={`diet-box ${diet === 'Non-Veg' ? 'active-nonveg' : ''}`} onClick={() => setDiet('Non-Veg')}>
-                  <MdOutlineSetMeal size={24} />
-                  <span>NON-VEG</span>
+                <div className={`diet-box ${diet === 'Non-Veg' ? 'active-nonveg' : ''}`} onClick={() => !loading && setDiet('Non-Veg')}>
+                  <MdOutlineSetMeal size={24} /><span>NON-VEG</span>
                 </div>
               </div>
             </div>
 
-            {/* Metabolic Rate */}
             <div className="card">
-              <p className="text-muted" style={{fontSize: '10px', letterSpacing: '1px', marginBottom: '8px'}}>REAL-TIME SYNC</p>
+              <p className="text-muted" style={{fontSize: '10px', letterSpacing: '1px', marginBottom: '8px'}}>
+                {loading ? 'AI GENERATING...' : 'AI POWERED • REAL-TIME'}
+              </p>
               <h3 className="card-title-small" style={{marginBottom: '10px'}}>METABOLIC RATE</h3>
-              <h1 className="text-cyan" style={{fontSize: '36px', transition: '0.3s'}}>{currentStats.cals} <span style={{fontSize: '14px', color: '#8a93a6'}}>kcal/day</span></h1>
-              <div className="progress-bar-container" style={{marginTop: '15px'}}>
-                <div className="progress-bar-fill" style={{width: currentStats.width, transition: 'width 0.5s ease'}}></div>
-              </div>
+              {loading ? (
+                <div className="ai-loading-state">
+                  <div className="ai-spinner"></div>
+                  <p className="text-muted" style={{fontSize: '12px', marginTop: '10px'}}>Generating your plan...</p>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-cyan" style={{fontSize: '36px', transition: '0.3s'}}>
+                    {currentStats.cals} <span style={{fontSize: '14px', color: '#8a93a6'}}>kcal/day</span>
+                  </h1>
+                  <div className="progress-bar-container" style={{marginTop: '15px'}}>
+                    <div className="progress-bar-fill" style={{width: currentStats.width, transition: 'width 0.5s ease'}}></div>
+                  </div>
+                </>
+              )}
             </div>
-
           </div>
 
-          {/* ================= CENTER COLUMN (Macros & Meals) ================= */}
+          {/* CENTER COLUMN */}
           <div className="nutri-center-col">
-            
-            {/* Macros Row */}
             <div className="macros-row">
               <div className="macro-box border-top-cyan">
-                <p>PROTEIN</p>
-                <h2>{currentStats.protein}</h2>
+                <p>PROTEIN</p><h2>{loading ? '—' : currentStats.protein}</h2>
                 <div className="macro-line line-cyan"></div>
               </div>
               <div className="macro-box border-top-green">
-                <p>CARBS</p>
-                <h2>{currentStats.carbs}</h2>
+                <p>CARBS</p><h2>{loading ? '—' : currentStats.carbs}</h2>
                 <div className="macro-line line-green"></div>
               </div>
               <div className="macro-box border-top-red">
-                <p>FATS</p>
-                <h2>{currentStats.fats}</h2>
+                <p>FATS</p><h2>{loading ? '—' : currentStats.fats}</h2>
                 <div className="macro-line line-red"></div>
               </div>
             </div>
 
             <div className="fuel-plan-header">
-              <h2>Daily Fuel Plan</h2>
-              <span className="date-badge">WEDNESDAY, OCT 25</span>
-            </div>
+            <h2>Daily Fuel Plan</h2>
+            <button className="btn-outline-cyan" onClick={fetchDietPlan} disabled={loading}
+    style={{fontSize:'11px', padding:'8px 16px'}}>
+    {loading ? 'GENERATING...' : '⚡ GENERATE PLAN'}
+  </button>
+</div>
+            {error && !loading && (
+              <div className="card" style={{borderColor: '#ff5252', textAlign: 'center', padding: '24px'}}>
+                <FiAlertCircle className="text-red" size={32} style={{marginBottom: '12px'}} />
+                <p className="text-red" style={{fontSize: '13px', marginBottom: '8px'}}>Failed to load AI diet plan</p>
+                <p className="text-muted" style={{fontSize: '11px', marginBottom: '16px'}}>{error}</p>
+                <button className="btn-outline-cyan" onClick={fetchDietPlan}>RETRY</button>
+              </div>
+            )}
 
-            {/* Dynamic Meal List */}
-            <div className="meal-list">
-              {currentMeals.map((meal, index) => (
-                <div className={`meal-card border-left-${meal.color}`} key={index}>
-                  <div className={`meal-img-box ${meal.bg}`}></div>
-                  <div className="meal-info">
-                    <div className="meal-time-row">
-                      <span className={`text-${meal.color} meal-time`}>{meal.time}</span>
-                      <span className="meal-cals">{meal.cals} <br/><small>KCAL</small></span>
-                    </div>
-                    <h3>{meal.title}</h3>
-                    <p>{meal.desc}</p>
-                    <div className="meal-tags">
-                      {meal.tags.map((tag, i) => <span key={i}>{tag}</span>)}
+            {loading && (
+              <div className="meal-list">
+                {[1,2,3].map(i => (
+                  <div className="meal-card border-left-cyan" key={i} style={{opacity: 0.4}}>
+                    <div className="meal-img-box" style={{background: '#2a2e39'}}></div>
+                    <div className="meal-info" style={{flex: 1}}>
+                      <div style={{height: '10px', background: '#2a2e39', borderRadius: '4px', width: '60%', marginBottom: '10px'}}></div>
+                      <div style={{height: '16px', background: '#2a2e39', borderRadius: '4px', width: '80%', marginBottom: '8px'}}></div>
+                      <div style={{height: '10px', background: '#2a2e39', borderRadius: '4px', width: '90%'}}></div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
+            {!loading && !error && (
+              <div className="meal-list">
+                {currentMeals.map((meal, index) => (
+                  <div className={`meal-card border-left-${meal.color}`} key={index}>
+                    <div className="meal-img-ai" style={{
+                      background: meal.color === 'cyan' ? 'linear-gradient(135deg,#00e5ff22,#00e5ff44)' : meal.color === 'green' ? 'linear-gradient(135deg,#00e67622,#00e67644)' : 'linear-gradient(135deg,#ff525222,#ff525244)',
+                      minWidth: '80px', height: '80px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <span style={{fontSize: '22px'}}>
+                        {meal.timeSlot === 'pre-workout' ? '⚡' : meal.timeSlot === 'breakfast' ? '🌅' : meal.timeSlot === 'lunch' ? '🍽️' : meal.timeSlot === 'snack' ? '🥗' : '🌙'}
+                      </span>
+                    </div>
+                    <div className="meal-info">
+                      <div className="meal-time-row">
+                        <span className={`text-${meal.color} meal-time`}>{meal.time}</span>
+                        <span className="meal-cals">{meal.cals} <br/><small>KCAL</small></span>
+                      </div>
+                      <h3>{meal.title}</h3>
+                      <p>{meal.desc}</p>
+                      <div className="meal-tags">{meal.tags.map((tag, i) => <span key={i}>{tag}</span>)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* ================= RIGHT COLUMN (Insights) ================= */}
+          {/* RIGHT COLUMN */}
           <div className="nutri-right-col">
-            
-            {/* Micronutrient Radar */}
             <div className="card">
               <h3 style={{marginBottom: '20px', fontSize: '16px'}}>Micronutrient Radar</h3>
-              <div className="micro-item">
-                <div className="micro-icon bg-cyan-light"><FiZap className="text-cyan"/></div>
-                <div className="micro-details">
-                  <div className="micro-text"><span>Vitamin D3</span> <span className="text-green">OPTIMAL</span></div>
-                  <div className="micro-bar-bg"><div className="micro-bar-fill bg-green" style={{width: '90%'}}></div></div>
+              {loading ? (
+                <div style={{opacity: 0.4}}>
+                  {[1,2,3,4].map(i => (
+                    <div className="micro-item" key={i}>
+                      <div className="micro-icon bg-cyan-light"></div>
+                      <div className="micro-details" style={{flex:1}}>
+                        <div style={{height:'10px', background:'#2a2e39', borderRadius:'4px', marginBottom:'8px'}}></div>
+                        <div className="micro-bar-bg"><div className="micro-bar-fill" style={{width:'30%', background:'#2a2e39'}}></div></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <div className="micro-item">
-                <div className="micro-icon bg-red-light"><FiAlertCircle className="text-red"/></div>
-                <div className="micro-details">
-                  <div className="micro-text"><span>Ferritin / Iron</span> <span className="text-red">CRITICAL</span></div>
-                  <div className="micro-bar-bg"><div className="micro-bar-fill bg-red" style={{width: '30%'}}></div></div>
-                </div>
-              </div>
+              ) : (
+                micronutrients.map((micro, i) => {
+                  const colors = microStatusColor(micro.status);
+                  return (
+                    <div className="micro-item" key={i}>
+                      <div className={`micro-icon ${micro.status === 'CRITICAL' || micro.status === 'LOW' ? 'bg-red-light' : 'bg-cyan-light'}`}>
+                        {micro.status === 'CRITICAL' || micro.status === 'LOW' ? <FiAlertCircle className={colors.text}/> : <FiCheckCircle className={colors.text}/>}
+                      </div>
+                      <div className="micro-details">
+                        <div className="micro-text"><span>{micro.name}</span><span className={colors.text}>{micro.status}</span></div>
+                        <div className="micro-bar-bg">
+                          <div className="micro-bar-fill" style={{
+                            width: `${micro.level}%`,
+                            background: micro.status === 'OPTIMAL' ? 'var(--green)' : micro.status === 'GOOD' ? 'var(--cyan)' : micro.status === 'LOW' ? '#8a93a6' : 'var(--red)'
+                          }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
-            {/* AI Insights */}
             <div className="card ai-insight-card">
               <h3 className="card-title-small"><span className="text-cyan">✦ ATHLETE OS AI</span></h3>
-              <p className="ai-quote">
-                "Arjun, your recovery metrics from Oura show a slight dip. I've increased the magnesium-rich content in your dinner plan. Stick to the <span className="text-cyan">Ashwagandha Moon Milk</span> tonight."
-              </p>
-              <button className="btn-outline-cyan">MODIFY PLAN</button>
+              {loading ? (
+                <div style={{opacity: 0.5}}>
+                  <div style={{height:'10px', background:'#2a2e39', borderRadius:'4px', marginBottom:'8px'}}></div>
+                  <div style={{height:'10px', background:'#2a2e39', borderRadius:'4px', width:'80%', marginBottom:'8px'}}></div>
+                  <div style={{height:'10px', background:'#2a2e39', borderRadius:'4px', width:'60%'}}></div>
+                </div>
+              ) : (
+                <p className="ai-quote">"{aiInsight}"</p>
+              )}
+              <button className="btn-outline-cyan" onClick={fetchDietPlan} disabled={loading}>
+                {loading ? 'GENERATING...' : 'REGENERATE PLAN'}
+              </button>
             </div>
 
-            {/* Supplement Stack */}
             <div className="card">
               <h3 style={{marginBottom: '16px', fontSize: '16px'}}>Supplement Stack</h3>
               <ul className="supp-list">
-                <li><FiCheckCircle className="text-cyan"/> Creatine Monohydrate (5g)</li>
-                <li><FiCheckCircle className="text-cyan"/> Omega-3 Fish Oil (2000mg)</li>
-                <li className="text-muted"><div className="empty-circle"></div> ZMA (Pre-Bed)</li>
+                {loading ? (
+                  [1,2,3].map(i => (
+                    <li key={i} style={{opacity: 0.4}}>
+                      <div style={{height:'10px', background:'#2a2e39', borderRadius:'4px', width:'80%'}}></div>
+                    </li>
+                  ))
+                ) : (
+                  supplements.map((supp, i) => (
+                    <li key={i}><FiCheckCircle className="text-cyan"/> {supp}</li>
+                  ))
+                )}
               </ul>
             </div>
 
             <div className="fab-button"><FiPlus size={28} /></div>
-
           </div>
         </div>
       </main>
