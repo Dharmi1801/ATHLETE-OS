@@ -5,7 +5,7 @@ import AiCoach from './AiCoach';
 import Profile from './Profile';
 import Nutrition from './Nutrition';
 import Ranking from './Ranking';
-import Injury from './Injury';
+import InjuryPredictor from "./InjuryPredictor";         
 import Opportunities from './Opportunities';
 
 
@@ -19,7 +19,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/nutrition" element={<Nutrition/>} />
         <Route path="/ranking" element={<Ranking />} />
-        <Route path="/injury" element={<Injury />} />
+        <Route path="/injury" element={<InjuryPredictor />} />
         <Route path="/opportunities" element={<Opportunities />} />
       </Routes>
     </Router>

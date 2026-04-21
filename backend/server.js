@@ -5,16 +5,16 @@ require('dotenv').config(); // 🔥 IMPORTANT
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const pool = require("./config/db");
+const predictionRoutes = require('./routes/predictionRoutes');
+
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // 🔥 ENV se DB connect
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+
 
 pool.connect()
   .then(() => console.log("✅ Database Connected Successfully"))
@@ -265,3 +265,28 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${PORT}`);
 });
+
+/* ==============================
+   🔥 MIDDLEWARE (ORDER IMPORTANT)
+================================= */
+
+app.use(cors({
+  origin: "http://localhost:3000",
+  methods: ["GET", "POST", "PUT"],
+  credentials: true
+}));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+/* ==============================
+   🔥 DEBUG BODY CHECK
+================================= */
+app.use((req, res, next) => {
+  console.log("Incoming:", req.method, req.url);
+  console.log("BODY RECEIVED:", req.body);
+  next();
+});
+
+
+app.use('/api', predictionRoutes); 
