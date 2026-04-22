@@ -47,10 +47,11 @@ export default function VoiceInjuryAI() {
  const speakQuestion = (text) => {
   return new Promise((resolve) => {
 
-    const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-      "8qsv2M4ZjW5PUxr2gf5GUxd5OgNncmjsoPLdX5ggipvjv2nhV3FLJQQJ99CAACGhslBXJ3w3AAAYACOGxcwH",
-      "centralindia"
-    );
+    // Sahi ✅ (Environment Variable use karo)
+const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+  process.env.AZURE_SPEECH_KEY, 
+  process.env.AZURE_SPEECH_REGION
+)
 
     const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
 
@@ -74,10 +75,11 @@ export default function VoiceInjuryAI() {
 
     setListening(true);
 
-    const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-      "8qsv2M4ZjW5PUxr2gf5GUxd5OgNncmjsoPLdX5ggipvjv2nhV3FLJQQJ99CAACGhslBXJ3w3AAAYACOGxcwH",
-      "centralindia"
-    );
+    // ✅ Isse replace karo
+const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+  process.env.AZURE_SPEECH_KEY, 
+  process.env.AZURE_SPEECH_REGION
+);
 
     speechConfig.speechRecognitionLanguage = "en-US";
 
