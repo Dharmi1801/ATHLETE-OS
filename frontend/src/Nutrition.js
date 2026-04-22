@@ -5,9 +5,17 @@ import { FiHome, FiCpu, FiCoffee, FiUser, FiSearch, FiBell, FiSettings, FiCheckC
 import { BiTargetLock, BiLeaf } from 'react-icons/bi';
 import { MdOutlineSetMeal } from 'react-icons/md';
 // NOTE: The API key is exposed here for demonstration purposes only. In production, this should be securely stored and accessed via a backend service to prevent misuse. 
-const GEMINI_API_KEY = 'AIzaSyAHj73-LAJX7-WezYcsD_Eb25zORM-N37M';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
+// ✅ Frontend ka naya function
+const generateDiet = async () => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/generate-diet`, {
+      prompt: "Create a diet plan for an athlete..." 
+    });
+    setDietPlan(response.data);
+  } catch (err) {
+    alert("Failed to load AI diet plan. Check backend logs.");
+  }
+};
 export default function Nutrition() {
   const [active, setActive] = useState("nutrition");
   const [goal, setGoal] = useState('Build Muscle');
