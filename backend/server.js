@@ -104,7 +104,7 @@ app.post('/api/fitness-log', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+// injury prediction api
 // Opportunities API
 app.get('/api/opportunities', async (req, res) => {
   const { category } = req.query;

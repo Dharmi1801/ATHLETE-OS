@@ -16,7 +16,7 @@
   max-width: 100% !important; 
   padding: 30px 40px;
 }
-
+/* Locking the layout to prevent shifts when navigating between pages */
 /* 3-Column Grid setup */
 .nutrition-grid {
   display: grid !important;

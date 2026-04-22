@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { FiHome, FiCpu, FiCoffee, FiUser, FiSearch, FiBell, FiSettings, FiCheckCircle, FiAlertCircle, FiZap, FiPlus, FiActivity, FiAward, FiTarget, FiLogOut } from 'react-icons/fi';
 import { BiTargetLock, BiLeaf } from 'react-icons/bi';
 import { MdOutlineSetMeal } from 'react-icons/md';
-
+// NOTE: The API key is exposed here for demonstration purposes only. In production, this should be securely stored and accessed via a backend service to prevent misuse. 
 const GEMINI_API_KEY = 'AIzaSyAHj73-LAJX7-WezYcsD_Eb25zORM-N37M';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -24,7 +24,7 @@ export default function Nutrition() {
   };
 
   const fetchDietPlan = useCallback(async () => {
-
+  // cler local storage to prevent blocking after 10 seconds
   // Prevent spam clicking
   const lastCall = localStorage.getItem('lastDietCall');
   const now = Date.now();
@@ -110,7 +110,7 @@ setDietPlan(plan);
   const aiInsight = dietPlan?.aiInsight || '';
   const supplements = dietPlan?.supplements || [];
   const micronutrients = dietPlan?.micronutrients || [];
-
+// 
   return (
     <div className="dashboard-container">
       <aside className="sidebar">
