@@ -22,9 +22,14 @@ export default function Opportunities() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/opportunities?category=${activeFilter}`);
-        setEvents(res.data);
-      } catch (err) {
+  // Variable define karo (laptop aur live dono ke liye)
+  const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+  // URL ko dynamic banao
+  const res = await axios.get(`${API_BASE_URL}/api/opportunities?category=${activeFilter}`);
+  
+  setEvents(res.data);
+} catch (err) {
         console.log("Backend offline, loading fallback data.");
         // Fallback UI data
         const fallback = [

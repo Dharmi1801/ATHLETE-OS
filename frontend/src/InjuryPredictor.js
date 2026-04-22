@@ -32,11 +32,16 @@ export default function VoiceInjuryAI() {
 ];
 
   // 🔹 Fetch baseline
-  useEffect(() => {
-    fetch("http://localhost:5000/api/athlete-baseline/1")
-      .then(res => res.json())
-      .then(data => setBaselineData(data));
-  }, []);
+ useEffect(() => {
+  // Yahan variables ko define kar rahe hain
+  const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+  // Ab yahan URL ko backticks (`) aur ${} use karke dynamic bana diya
+  fetch(`${API_BASE_URL}/api/athlete-baseline/1`)
+    .then(res => res.json())
+    .then(data => setBaselineData(data))
+    .catch(err => console.error("Error fetching baseline:", err)); // Error handling ke liye
+}, []);
 
   // 🔹 Speak Question
  const speakQuestion = (text) => {

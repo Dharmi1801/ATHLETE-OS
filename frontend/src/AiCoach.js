@@ -64,21 +64,24 @@ export default function AiCoach() {
     try {
       setLoading(true);
 
-      const res = await fetch("http://localhost:5000/api/coach/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message,
-          metrics: {
-            depth,
-            kneeAngle,
-            posture,
-            reps
-          }
-        })
-      });
+// Pehle ek variable bana lo (Ya ise file ke sabse upar bhi rakh sakte ho)
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+const res = await fetch(`${API_BASE_URL}/api/coach/chat`, { // <-- Bas yahan change hua hai
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message,
+      metrics: {
+        depth,
+        kneeAngle,
+        posture,
+        reps
+      }
+    })
+});
 
       const data = await res.json();
       setAiReply(data.reply || "No response");

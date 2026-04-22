@@ -12,11 +12,13 @@ const Login = () => {
   e.preventDefault();
 
   try {
-    const res = await axios.post("http://localhost:5000/api/login", {
-      email,
-      password,
-    });
-    // Login.js ke andar API call ke baad:
+    // Variable define karo jo check karega ki website live hai ya local laptop par
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+const res = await axios.post(`${API_BASE_URL}/api/login`, {
+  email,
+  password,
+});// Login.js ke andar API call ke baad:
 
 if (res.data.success) {
    // User ID ko local storage me save karo

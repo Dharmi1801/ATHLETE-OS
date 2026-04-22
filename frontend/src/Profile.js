@@ -65,7 +65,11 @@ const handleSaveProfile = async () => {
       console.log("Saving data for User ID:", userId);
 
       // 3. Backend API ko data bhejo, URL mein userId lagakar
-      const response = await axios.put(`http://localhost:5000/api/profile/${userId}`, profileData);
+      // Variable define karo
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+// Ab URL ko update karo
+const response = await axios.put(`${API_BASE_URL}/api/profile/${userId}`, profileData);
       
       alert("Profile Successfully Updated!");
       

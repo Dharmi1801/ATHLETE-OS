@@ -25,8 +25,12 @@ export default function Ranking() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/leaderboard');
-        setCompetitors(res.data);
+      // Variable define karo
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+// Ab axios.get ko update karo
+const res = await axios.get(`${API_BASE_URL}/api/leaderboard`);
+setCompetitors(res.data);  
       } catch (err) {
         console.log("Using static data, backend not connected yet.");
       }
