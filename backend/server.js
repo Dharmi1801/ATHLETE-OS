@@ -2,6 +2,7 @@
 require('dotenv').config(); 
 
 const express = require('express');
+app.use(cors());
 const cors = require('cors');
 const { Pool } = require('pg');
 const pool = require("./config/db");
