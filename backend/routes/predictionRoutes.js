@@ -4,7 +4,7 @@ const router = express.Router();
 const {
   predictInjury,
   getAthleteBaseline,
-  getFullHistory   // ✅ ADD THIS
+  getFullHistory   
 } = require("../controllers/predictionController");
 
 router.post("/", predictInjury);

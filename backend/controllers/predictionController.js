@@ -68,7 +68,7 @@ exports.predictInjury = async (req, res) => {
       });
     }
 
-    // 🔥 AI Risk Calculation
+    //  AI Risk Calculation
     let riskScore =
       (10 - sleep) * 2 +
       load * 1.5 +
@@ -80,15 +80,15 @@ exports.predictInjury = async (req, res) => {
     let advice = "";
 
     if (riskScore > 30) {
-      riskLevel = "High";
+      riskLevel = "High\n";
       advice =
-        "⚠ High Injury Risk Detected.\n" +
-        "- Immediate recovery session recommended\n" +
-        "- Reduce training intensity by 40%\n" +
-        "- Prioritize 8+ hours sleep\n" +
+        "⚠ High Injury Risk Detected.\n\n" +
+        "- Immediate recovery session recommended\n\n" +
+        "- Reduce training intensity by 40%\n\n" +
+        "- Prioritize 8+ hours sleep\n\n" +
         "- Monitor muscle soreness closely";
     } else if (riskScore > 18) {
-      riskLevel = "Moderate";
+      riskLevel = "Moderate\n";
       advice =
         "⚠ Moderate Risk.\n" +
         "- Reduce load slightly\n" +
