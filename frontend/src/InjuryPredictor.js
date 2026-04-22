@@ -15,6 +15,7 @@ export default function VoiceInjuryAI() {
   const [listening, setListening] = useState(false);
   const [started, setStarted] = useState(false);
   const [history, setHistory] = useState([]);
+   const [loading, setLoading] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("userId");
@@ -26,7 +27,8 @@ export default function VoiceInjuryAI() {
   "How many hours did you sleep last night?",
   "Rate your training load today from 1 to 10.",
   "Rate your mental stress today from 1 to 10.",
-  "Rate your fatigue level today from 1 to 10."
+  "Rate your fatigue level today from 1 to 10.",
+  "THANK YOU FOR ANSWERING"
 ];
 
   // 🔹 Fetch baseline
@@ -126,6 +128,7 @@ export default function VoiceInjuryAI() {
 const startSystem = async () => {
 
   setStarted(true);
+  setLoading(true);
   setAnswers([]);
   setResult(null);
 
@@ -144,7 +147,8 @@ const startSystem = async () => {
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  runPrediction(collectedAnswers);  // 🔥 PASS DATA DIRECTLY
+  await runPrediction(collectedAnswers);
+setLoading(false);  // 🔥 PASS DATA DIRECTLY
 };
   
   const extractNumber = (text) => {
@@ -220,7 +224,9 @@ const startSystem = async () => {
             <h2>🎙️ AI Voice Injury Prediction</h2>
 
             {!started && (
-              <button onClick={startSystem}>START</button>
+             <button onClick={startSystem} disabled={loading}>
+  {loading ? "Processing..." : "START"}
+</button>
             )}
 
             {started && (
