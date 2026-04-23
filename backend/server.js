@@ -30,10 +30,13 @@ app.use((req, res, next) => {
 /* ==========================================
       🚀 DATABASE CONNECTION
 ============================================= */
-pool.connect()
-  .then(() => console.log("✅ Database Connected Successfully"))
-  .catch(err => console.error("❌ Database Connection Failed:", err));
-
+// pool.connect() ki jagah seedha query chala kar check karo
+pool.query('SELECT NOW()')
+  .then(() => console.log("✅ Database Connected & Ready"))
+  .catch(err => {
+    console.error("❌ DB Connection Warning:", err.message);
+    // Server crash nahi karenge, bas warn karenge
+  });
 /* ==========================================
       ✅ ROUTES REGISTRATION
 ============================================= */
