@@ -42,10 +42,15 @@ export default function Nutrition() {
   try {
     // ✅ Backend ko call kar rahe hain
     // Purana { ... } hatao aur ye dalo
-const response = await axios.post("http://localhost:5000/api/nutrition/diet-plan", {
+// ❌ Purana galat code:
+// const response = await axios.post("http://localhost:5000/api/nutrition/diet-plan", { ... });
+
+// ✅ Naya sahi code (Jo Render URL use karega):
+const API_URL = process.env.REACT_APP_API_URL || "https://athlete-os-lixf.onrender.com";
+const response = await axios.post(`${API_URL}/api/nutrition/diet-plan`, {
     goal: goal,
     diet: diet,
-    sport: "Cricket" // Ya jo bhi default sport ho
+    sport: "Cricket"
 });
     if (response.data.success) {
       setDietPlan(response.data.plan);

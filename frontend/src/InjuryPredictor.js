@@ -33,14 +33,17 @@ export default function VoiceInjuryAI() {
 
   // 🔹 Fetch baseline
  useEffect(() => {
-  // Yahan variables ko define kar rahe hain
-  const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  // 1. API_URL ko environment variable se uthao ya default Render link dalo
+  const API_URL = process.env.REACT_APP_API_URL || "https://athlete-os-lixf.onrender.com";
 
-  // Ab yahan URL ko backticks (`) aur ${} use karke dynamic bana diya
-  fetch(`${API_BASE_URL}/api/athlete-baseline/1`)
-    .then(res => res.json())
+  // 2. Localhost hata kar dynamic URL use karo
+  fetch(`${API_URL}/api/athlete-baseline/1`)
+    .then(res => {
+      if (!res.ok) throw new Error('Network response was not ok');
+      return res.json();
+    })
     .then(data => setBaselineData(data))
-    .catch(err => console.error("Error fetching baseline:", err)); // Error handling ke liye
+    .catch(err => console.error("Dharmi, baseline fetch error:", err));
 }, []);
 
   // 🔹 Speak Question
