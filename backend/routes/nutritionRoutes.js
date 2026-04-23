@@ -1,15 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const axios = require('axios');
 
 router.post('/nutrition/diet-plan', async (req, res) => {
   const { goal, diet, sport } = req.body;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!goal || !diet) {
     return res.status(400).json({ error: "Goal and diet type are required" });
   }
 
-  // 🔥 Tumhara vahi badhiya JSON wala prompt
+  // 🔥 Tumhara full professional prompt
   const prompt = `You are an elite sports nutritionist AI for ATHLETE OS platform.
 Generate a highly personalized daily diet plan for a professional athlete with the following profile:
 - Performance Goal: ${goal}
@@ -95,25 +96,33 @@ Rules:
 - width in macros should reflect caloric intake as % (40-95%)
 - micronutrient level is a number 0-100
 - micronutrient status must be one of: "OPTIMAL", "GOOD", "LOW", "CRITICAL"`;
+  const modelsToTry = ["gemini-1.5-flash", "gemini-pro"];
+  let lastError = null;
 
+  for (let modelName of modelsToTry) {
+    try {
+      console.log(`🚀 Trying model: ${modelName}...`);
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+      const response = await axios.post(url, {
+        contents: [{ parts: [{ text: prompt }] }]
+      });
 
-  try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const rawText = response.data.candidates[0].content.parts[0].text;
+      const cleaned = rawText.replace(/```json|```/g, '').trim();
+      
+      return res.json({ success: true, plan: JSON.parse(cleaned) });
 
-    const result = await model.generateContent(prompt);
-    const rawText = result.response.text().trim();
-
-    // Cleaning JSON
-    const cleaned = rawText.replace(/```json|```/g, '').trim();
-    const dietPlan = JSON.parse(cleaned);
-
-    res.json({ success: true, plan: dietPlan });
-
-  } catch (err) {
-    console.error("Gemini Error:", err);
-    res.status(500).json({ error: "AI is currently busy or Key expired." });
+    } catch (err) {
+      console.error(`❌ Failed with ${modelName}:`, err.response?.data?.error?.message || err.message);
+      lastError = err;
+    }
   }
+
+  res.status(500).json({ 
+    success: false, 
+    error: "AI models are not responding. Check your API Key.",
+    detail: lastError.response?.data?.error?.message || lastError.message 
+  });
 });
 
 module.exports = router;

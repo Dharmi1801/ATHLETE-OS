@@ -46,46 +46,35 @@ export default function VoiceInjuryAI() {
   // 🔹 Speak Question
  const speakQuestion = (text) => {
   return new Promise((resolve) => {
-
-    // Sahi ✅ (Environment Variable use karo)
-const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-  process.env.AZURE_SPEECH_KEY, 
-  process.env.AZURE_SPEECH_REGION
-)
+    // 🚨 Yahan "REACT_APP_" lagana zaroori hai
+    const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+      process.env.REACT_APP_AZURE_SPEECH_KEY, 
+      process.env.REACT_APP_AZURE_SPEECH_REGION
+    );
 
     const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
-
     synthesizer.speakTextAsync(
       text,
-      () => {
-        synthesizer.close();
-        resolve();
-      },
-      () => {
-        synthesizer.close();
-        resolve();
-      }
+      () => { synthesizer.close(); resolve(); },
+      () => { synthesizer.close(); resolve(); }
     );
   });
 };
 
   // 🔹 Record Answer
-         const recordAnswer = (questionIndex) => {
+  const recordAnswer = (questionIndex) => {
   return new Promise((resolve) => {
-
     setListening(true);
 
-    // ✅ Isse replace karo
-const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-  process.env.AZURE_SPEECH_KEY, 
-  process.env.AZURE_SPEECH_REGION
-);
+    // 🚨 Yahan bhi "REACT_APP_" lagana zaroori hai
+    const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+      process.env.REACT_APP_AZURE_SPEECH_KEY, 
+      process.env.REACT_APP_AZURE_SPEECH_REGION
+    );
 
     speechConfig.speechRecognitionLanguage = "en-US";
-
     const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
-
     let finalText = "";
 
     recognizer.recognizing = (s, e) => {

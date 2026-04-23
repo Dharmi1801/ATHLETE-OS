@@ -11,7 +11,13 @@ const app = express(); // ✅ Pehle app define karo
 /* ==========================================
       🔥 MIDDLEWARE (Sahi Order Mein)
 ============================================= */
-app.use(cors()); // ✅ Simple cors for deployment
+// ✅ server.js mein ise replace karo
+// server.js mein purana CORS hatao aur ye dalo
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+})); // ✅ Simple cors for deployment
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

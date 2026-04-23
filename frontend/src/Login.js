@@ -1,6 +1,6 @@
-import React, { useState } from "react"; // ✅ fix
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // ✅ fix
+import axios from "axios";
 import "./LoginPage.css";
 
 const Login = () => {
@@ -8,56 +8,55 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-  e.preventDefault();
+  const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-  try {
-    // Variable define karo jo check karega ki website live hai ya local laptop par
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  // 1️⃣ Common function jo login process handle karega
+  const performLogin = async (loginEmail, loginPassword) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/login`, {
+        email: loginEmail,
+        password: loginPassword,
+      });
 
-const res = await axios.post(`${API_BASE_URL}/api/login`, {
-  email,
-  password,
-});// Login.js ke andar API call ke baad:
+      if (res.data.success) {
+        alert("Login Success ✅");
+        
+        // Dono tarah ke IDs aur details save kar lo jo tumne use kiye hain
+        localStorage.setItem('userId', res.data.user.id);
+        localStorage.setItem('userName', res.data.user.full_name);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
 
-if (res.data.success) {
-   // User ID ko local storage me save karo
-   localStorage.setItem('userId', res.data.user.id); // Database wala ID yahan set hoga
-   localStorage.setItem('userName', res.data.user.full_name); 
-   navigate('/dashboard');
-}
-
-    if (res.data.success) {
-      alert("Login Success ✅");
-
-      localStorage.setItem("user", JSON.stringify(res.data.user)); // ✅ store user
-
-      console.log(res.data);
-
-      navigate("/dashboard"); // ✅ redirect
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      alert("Login Failed ❌. Check credentials.");
     }
-  } catch (err) {
-    alert("Login Failed ❌");
-  }
-};
+  };
+
+  // 2️⃣ Normal Login (Form Submit)
+  const handleLogin = (e) => {
+    e.preventDefault();
+    performLogin(email, password);
+  };
+
+  // 3️⃣ 🔥 GUEST LOGIN (Auto-fill and Login)
+  const handleGuestLogin = () => {
+    const guestEmail = "arjun@athleteos.com";
+    const guestPassword = "password123"; // Apne "passwoed" spelling ke hisaab se
+
+    setEmail(guestEmail);
+    setPassword(guestPassword);
+
+    // Seedha login function call kar do
+    performLogin(guestEmail, guestPassword);
+  };
 
   return (
     <div className="container">
-      {/* LEFT SIDE */}
       <div className="left">
         <h4 className="logo">ATHLETE OS</h4>
-
-        <h1 className="title">
-          Empowering <br />
-          Every <span>Athlete’s</span> <br />
-          Journey with AI
-        </h1>
-
-        <p className="subtitle">
-          Access your personalized biomechanical engine.
-          Precision metrics for the next generation of performance.
-        </p>
-
+        <h1 className="title">Empowering <br /> Every <span>Athlete’s</span> <br /> Journey with AI</h1>
+        <p className="subtitle">Access your personalized biomechanical engine.</p>
         <div className="card">
           <p>ACTIVE TRACKING</p>
           <h2>142 BPM ❤️</h2>
@@ -65,14 +64,10 @@ if (res.data.success) {
         </div>
       </div>
 
-      {/* RIGHT SIDE */}
       <div className="right">
         <h2>Initialize Session</h2>
-        <p className="desc">
-          Sign in to sync your performance profile.
-        </p>
+        <p className="desc">Sign in to sync your performance profile.</p>
 
-        {/* ✅ form fix */}
         <form onSubmit={handleLogin}>
           <label>Email</label>
           <input
@@ -90,23 +85,22 @@ if (res.data.success) {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button type="submit" className="btn">
-            INITIALIZE SESSION
-          </button>
+          <button type="submit" className="btn">INITIALIZE SESSION</button>
         </form>
 
         <div className="divider">OR AUTHENTICATE VIA</div>
 
-        <button className="google-btn">
-          Continue with Google
+        <button className="google-btn">Continue with Google</button>
+
+        {/* 4️⃣ 🔥 Naya Guest Button yahan add kiya */}
+        <button type="button" className="guest-btn" onClick={handleGuestLogin}>
+          LOGIN AS GUEST (DEMO)
         </button>
 
-        <p className="apply">
-          New operative? <span>Apply for Access</span>
-        </p>
+        <p className="apply">New operative? <span>Apply for Access</span></p>
       </div>
     </div>
   );
 };
 
-export default Login; // ✅ fix
+export default Login;

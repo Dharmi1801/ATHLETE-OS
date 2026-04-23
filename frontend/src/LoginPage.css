@@ -128,3 +128,21 @@ form input {
   color: #00e6d0;
   cursor: pointer;
 }
+
+/* Guest Button Styling */
+.guest-btn {
+  margin-top: 15px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #00e6d0; /* Cyan border */
+  background: transparent;
+  color: #00e6d0;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.guest-btn:hover {
+  background: rgba(0, 230, 208, 0.1);
+  box-shadow: 0 0 15px rgba(0, 230, 208, 0.2);
+}

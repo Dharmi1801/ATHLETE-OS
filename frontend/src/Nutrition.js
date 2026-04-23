@@ -4,18 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { FiHome, FiCpu, FiCoffee, FiUser, FiSearch, FiBell, FiSettings, FiCheckCircle, FiAlertCircle, FiZap, FiPlus, FiActivity, FiAward, FiTarget, FiLogOut } from 'react-icons/fi';
 import { BiTargetLock, BiLeaf } from 'react-icons/bi';
 import { MdOutlineSetMeal } from 'react-icons/md';
+import axios from 'axios';
 // NOTE: The API key is exposed here for demonstration purposes only. In production, this should be securely stored and accessed via a backend service to prevent misuse. 
+
+const API_BASE_URL = "https://athlete-os-lixf.onrender.com"; 
+// Agar tum local backend chala rahi ho toh ise "http://localhost:5000" karo
 // ✅ Frontend ka naya function
-const generateDiet = async () => {
-  try {
-    const response = await axios.post(`${API_BASE_URL}/api/generate-diet`, {
-      prompt: "Create a diet plan for an athlete..." 
-    });
-    setDietPlan(response.data);
-  } catch (err) {
-    alert("Failed to load AI diet plan. Check backend logs.");
-  }
-};
+
 export default function Nutrition() {
   const [active, setActive] = useState("nutrition");
   const [goal, setGoal] = useState('Build Muscle');
@@ -32,8 +27,7 @@ export default function Nutrition() {
   };
 
   const fetchDietPlan = useCallback(async () => {
-  // cler local storage to prevent blocking after 10 seconds
-  // Prevent spam clicking
+  // Prevent spam clicking (10 seconds cooldown)
   const lastCall = localStorage.getItem('lastDietCall');
   const now = Date.now();
   if (lastCall && now - parseInt(lastCall) < 10000) {
@@ -41,69 +35,33 @@ export default function Nutrition() {
     return;
   }
   localStorage.setItem('lastDietCall', now.toString());
-  
-  
-    setLoading(true);
-    setError(null);
-const prompt = `Nutritionist. Diet plan for athlete. Goal: ${goal}. Diet: ${diet}.
-${diet === 'Veg' ? 'Vegetarian only.' : 'Include chicken fish eggs.'}
 
-Return ONLY this JSON no extra text:
-{"macros":{"cals":"2840","protein":"180g","carbs":"320g","fats":"65g","width":"75%"},"meals":[{"time":"06:30 AM • PRE-WORKOUT","cals":320,"title":"X","desc":"X.","tags":["A","B"],"color":"cyan","timeSlot":"pre-workout"},{"time":"09:00 AM • BREAKFAST","cals":480,"title":"X","desc":"X.","tags":["A","B"],"color":"green","timeSlot":"breakfast"},{"time":"01:30 PM • LUNCH","cals":640,"title":"X","desc":"X.","tags":["A","B"],"color":"green","timeSlot":"lunch"},{"time":"05:00 PM • SNACK","cals":280,"title":"X","desc":"X.","tags":["A","B"],"color":"red","timeSlot":"snack"},{"time":"08:30 PM • DINNER","cals":580,"title":"X","desc":"X.","tags":["A","B"],"color":"cyan","timeSlot":"dinner"}],"aiInsight":"X.","supplements":["X","X","X"],"micronutrients":[{"name":"Vitamin D3","status":"OPTIMAL","level":90},{"name":"Iron","status":"CRITICAL","level":25},{"name":"Magnesium","status":"GOOD","level":68},{"name":"Zinc","status":"LOW","level":42}]}
+  setLoading(true);
+  setError(null);
 
-Replace all X values with real content for ${goal} ${diet} athlete. Keep desc under 15 words. Keep title under 5 words.`;
-
-    try {
-      const response = await fetch(GEMINI_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 8000 }
-        })
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error?.message || `Gemini error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      if (!rawText) throw new Error('Empty response from Gemini');
-const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-
-let fixedJson = cleaned;
-try {
-  JSON.parse(fixedJson);
-} catch(e) {
-  const lastBrace = fixedJson.lastIndexOf('}');
-  const lastBracket = fixedJson.lastIndexOf(']');
-  if (lastBrace > lastBracket) {
-    fixedJson = fixedJson.substring(0, lastBrace + 1);
-  } else {
-    fixedJson = fixedJson.substring(0, lastBracket + 1);
-  }
-  let opens = (fixedJson.match(/{/g) || []).length;
-  let closes = (fixedJson.match(/}/g) || []).length;
-  let arrOpens = (fixedJson.match(/\[/g) || []).length;
-  let arrCloses = (fixedJson.match(/\]/g) || []).length;
-  for (let i = 0; i < arrOpens - arrCloses; i++) fixedJson += ']';
-  for (let i = 0; i < opens - closes; i++) fixedJson += '}';
-}
-
-const plan = JSON.parse(fixedJson);
-setDietPlan(plan);
-
-    } catch (err) {
-      console.error('Diet plan error:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  try {
+    // ✅ Backend ko call kar rahe hain
+    // Purana { ... } hatao aur ye dalo
+const response = await axios.post("http://localhost:5000/api/nutrition/diet-plan", {
+    goal: goal,
+    diet: diet,
+    sport: "Cricket" // Ya jo bhi default sport ho
+});
+    if (response.data.success) {
+      setDietPlan(response.data.plan);
+    } else {
+      throw new Error("Backend failed to generate plan");
     }
-  }, [goal, diet]);
 
-  
+  } catch (err) {
+    console.error('Diet plan error:', err);
+    // Agar Backend se error aaye toh message dikhao
+    setError(err.response?.data?.error || err.message);
+  } finally {
+    setLoading(false);
+  }
+}, [goal, diet]);
+
 
   const microStatusColor = (status) => {
     if (status === 'OPTIMAL') return { text: 'text-green', bar: 'bg-green' };
