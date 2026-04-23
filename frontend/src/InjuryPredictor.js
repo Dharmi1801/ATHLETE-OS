@@ -161,7 +161,7 @@ const runPrediction = async (answersData) => {
   const API_URL = process.env.REACT_APP_API_URL || "https://athlete-os-lixf.onrender.com";
 
   const sleep = extractNumber(answersData[0]);
-  const load = extractNumber(answersNumber(answersData[1]));
+  const load = extractNumber(answersData[1]);
   const stress = extractNumber(answersData[2]);
   const fatigue = extractNumber(answersData[3]);
 
