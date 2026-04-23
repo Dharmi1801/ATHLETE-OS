@@ -155,32 +155,42 @@ setLoading(false);  // 🔥 PASS DATA DIRECTLY
   return num ? parseInt(num[0]) : 0;
 };
   // 🔹 Run Prediction
-      const runPrediction = async (answersData) => {
+  // 🔹 Run Prediction (Updated for Live Website)
+const runPrediction = async (answersData) => {
+  // Sabse pehle API_URL define karo (agar upar nahi kiya hai toh)
+  const API_URL = process.env.REACT_APP_API_URL || "https://athlete-os-lixf.onrender.com";
 
   const sleep = extractNumber(answersData[0]);
-  const load = extractNumber(answersData[1]);
+  const load = extractNumber(answersNumber(answersData[1]));
   const stress = extractNumber(answersData[2]);
   const fatigue = extractNumber(answersData[3]);
 
-  const res = await fetch("http://localhost:5000/api", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      athleteId: 1,
-      sleep: Number(sleep),
-      load: Number(load),
-      stress: Number(stress),
-      fatigue: Number(fatigue)
-    })
-  });
+  try {
+    // 🚨 Yahan localhost hata kar `${API_URL}` use kiya hai
+    const res = await fetch(`${API_URL}/api`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        athleteId: 1,
+        sleep: Number(sleep),
+        load: Number(load),
+        stress: Number(stress),
+        fatigue: Number(fatigue)
+      })
+    });
 
-  const data = await res.json();
-  setResult(data);
+    const data = await res.json();
+    setResult(data);
 
-  // 🔥 Fetch Updated History
-  const historyRes = await fetch("http://localhost:5000/api/history/1");
-  const historyData = await historyRes.json();
-  setHistory(historyData);
+    // 🔥 Fetch Updated History (Yahan bhi localhost hata diya)
+    const historyRes = await fetch(`${API_URL}/api/history/1`);
+    const historyData = await historyRes.json();
+    setHistory(historyData);
+    
+  } catch (err) {
+    console.error("Prediction Error:", err);
+    alert("Backend connection failed! Make sure Render is awake.");
+  }
 };
   return (
   <div className="dashboard-container">
